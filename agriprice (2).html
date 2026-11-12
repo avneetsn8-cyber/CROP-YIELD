@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AgriPrice</title>
+<style>
+  :root{
+    --bg:#f6f3e8; --card:#fff; --ink:#1b1b1b; --muted:#5c6157;
+    --green:#1f7a3d; --green-d:#14401f; --green-l:#e6f2e8;
+    --gold:#d8b53a; --up:#1e9a48; --down:#c0392b; --line:#e4dfcd;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;line-height:1.45}
+
+  /* ticker */
+  .ticker{position:sticky;top:0;z-index:20;background:#0f3d1e;color:#fff;border-bottom:3px solid var(--gold);overflow:hidden;white-space:nowrap;font-size:14px}
+  .ticker-track{display:inline-flex;gap:34px;padding:11px 0;animation:scroll 40s linear infinite}
+  .ticker:hover .ticker-track{animation-play-state:paused}
+  .ticker b{font-weight:600}
+  .ticker .up{color:#4fd37a}.ticker .down{color:#ff7b6b}
+  @keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  @media (prefers-reduced-motion:reduce){.ticker-track{animation:none}}
+
+  /* hero */
+  header{position:relative;text-align:center;padding:34px 16px 30px;background:linear-gradient(#fdf3c4,#f6f3e8);overflow:hidden}
+  header h1{margin:0;font-size:38px;color:var(--green-d);display:inline-flex;align-items:center;gap:12px}
+  header p{margin:12px auto 0;max-width:520px;color:var(--muted);font-size:15px}
+  .float{position:absolute;font-size:26px;opacity:.35}
+
+  main{max-width:856px;margin:0 auto;padding:20px 16px 40px}
+  section.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:22px 14px 16px;margin-bottom:28px}
+  h2{margin:0 0 4px;font-size:20px;color:var(--green-d);border-left:4px solid var(--gold);padding-left:12px;line-height:1.2}
+  .sub{margin:6px 0 14px 16px;color:var(--muted);font-size:14px}
+
+  /* predictor */
+  .pred-intro{margin:10px 0 14px 16px;color:var(--muted);font-size:14px}
+  .pred-intro b{color:var(--ink)}
+  .form-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;padding:0 4px}
+  label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:5px}
+  select,input[type=number],input[type=text]{width:100%;padding:9px 10px;font:inherit;font-size:14px;border:1px solid #d6d2c0;border-radius:7px;background:#fff;color:var(--ink)}
+  select:focus,input:focus,button:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+  .btn{display:inline-block;margin-top:18px;padding:10px 18px;background:var(--green);color:#fff;border:0;border-radius:7px;font:inherit;font-weight:600;font-size:14px;cursor:pointer}
+  .btn:hover{background:#18642f}
+  .btn.ghost{background:#fff;color:var(--green);border:1px solid var(--green);margin-left:8px}
+  .btn.ghost:hover{background:var(--green-l)}
+  .metrics{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin:20px 4px 6px}
+  .metric{background:var(--bg);border-radius:8px;padding:11px 12px}
+  .metric small{display:block;color:var(--muted);font-size:12.5px}
+  .metric strong{font-size:24px;color:#333}
+  .badge{display:inline-block;margin-top:4px;padding:3px 12px;border-radius:999px;color:#fff;font-weight:600;font-size:13px}
+  .badge.High{background:#22a04d}.badge.Medium{background:#d89a1f}.badge.Low{background:#c0392b}
+  table.rank{width:calc(100% - 8px);margin:14px 4px 0;border-collapse:collapse;font-size:14px}
+  table.rank th{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);font-weight:600}
+  table.rank td{padding:6px 6px;border-bottom:1px solid #f0ecdc}
+  table.rank td.n{text-align:left;width:46%}
+  table.rank td.v{width:14%}
+  .bar{height:5px;border-radius:3px;background:var(--green)}
+  .note{margin:10px 6px 0;color:var(--muted);font-size:12.5px}
+
+  /* category chips */
+  .chips{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin:0 0 26px}
+  .chips a{padding:6px 16px;border:1px solid var(--green);border-radius:999px;color:var(--green);text-decoration:none;font-size:14px;background:transparent}
+  .chips a:hover{background:var(--green-l)}
+
+  /* price cards */
+  .cat{margin-bottom:34px;scroll-margin-top:60px}
+  .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .price-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 13px 10px}
+  .price-card .top{display:flex;justify-content:space-between;align-items:center;font-weight:600;font-size:14px}
+  .price-card .top span{font-size:18px}
+  .price-card .p{margin:16px 0 2px;font-size:26px;font-weight:700}
+  .price-card .p small{font-size:13px;font-weight:400;color:var(--muted)}
+  .chg{font-size:13px}.chg.up{color:var(--up)}.chg.down{color:var(--down)}
+  .price-card svg{display:block;width:100%;height:46px;margin-top:8px}
+
+  /* charts */
+  .charts{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .chart-card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 12px 12px}
+  .chart-card h3{margin:0 0 8px;font-size:14px;color:var(--green-d)}
+  .chart-card select{width:auto;font-weight:600;margin-bottom:6px}
+  .chart-card canvas{width:100%!important;height:230px!important}
+  .chart-card.pie canvas{height:200px!important}
+
+  /* disease detector */
+  .detect{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:0 4px}
+  .drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;height:160px;border:2px dashed var(--green);border-radius:8px;background:var(--green-l);cursor:pointer;text-align:center;padding:10px;overflow:hidden}
+  .drop.drag{background:#d3ead8}
+  .drop b{font-size:15px}.drop small{color:var(--muted)}
+  .drop img{max-height:100%;max-width:100%;border-radius:6px}
+  .results{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:14px;min-height:300px;white-space:pre-wrap}
+  .detect .field{margin-top:14px}
+  .disclaimer{margin:16px 6px 0;color:var(--muted);font-size:13px}
+  .server{text-align:center;color:var(--muted);font-size:13px;margin:-14px 0 14px}
+
+  footer{background:#0f3d1e;color:#e8efe9;text-align:center;font-size:13px;padding:16px}
+
+  @media (max-width:820px){
+    .form-grid{grid-template-columns:1fr 1fr}
+    .grid4{grid-template-columns:1fr 1fr}
+    .charts{grid-template-columns:1fr}
+    .metrics{grid-template-columns:1fr}
+    .detect{grid-template-columns:1fr}
+    table.rank td.n{width:auto}
+  }
+
+  /* ---------- animations ---------- */
+  .float{animation:bob 6s ease-in-out infinite}
+  .float:nth-of-type(2){animation-duration:7.5s;animation-delay:-2s}
+  .float:nth-of-type(3){animation-duration:5.5s;animation-delay:-4s}
+  .float:nth-of-type(4){animation-duration:8s;animation-delay:-1s}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-14px) rotate(8deg)}}
+  header h1{animation:drop .9s cubic-bezier(.2,.9,.3,1.2) both}
+  header h1>span{display:inline-block;transform-origin:50% 90%;animation:sway 3.6s ease-in-out 1s infinite}
+  header p{animation:fade 1s .35s both}
+  @keyframes drop{from{opacity:0;transform:translateY(-28px) scale(.92)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  @keyframes sway{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+
+  .js .reveal{opacity:0;transform:translateY(26px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1);transition-delay:var(--d,0ms)}
+  .js .reveal.in{opacity:1;transform:none}
+
+  .price-card,.chart-card{transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease}
+  .js .reveal.in.price-card:hover,.js .reveal.in.chart-card:hover{transform:translateY(-5px);box-shadow:0 10px 22px rgba(20,64,31,.12);border-color:#cfd8b8;transition-delay:0ms}
+  .chips a{transition:background .2s,transform .2s,color .2s}
+  .chips a:hover{transform:translateY(-2px)}
+  .btn{transition:background .2s,transform .15s,box-shadow .2s}
+  .btn:hover{box-shadow:0 4px 12px rgba(31,122,61,.3);transform:translateY(-1px)}
+  .btn:active{transform:scale(.96)}
+  .drop{transition:background .2s,transform .2s,border-color .2s}
+  .drop:hover{transform:scale(1.01);background:#dcefe0}
+
+  /* sparkline draws itself */
+  .spark-line{stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.1s ease .25s}
+  .reveal.in .spark-line{stroke-dashoffset:0}
+
+  /* ranking bars grow */
+  .bar{transform-origin:left center;animation:grow .8s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0ms)}
+  @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+  table.rank tr{animation:rowin .45s ease both;animation-delay:var(--d,0ms)}
+  @keyframes rowin{from{opacity:0;transform:translateX(-12px)}to{opacity:1;transform:none}}
+
+  /* predictor result feedback */
+  .metric.pulse{animation:pulse .7s ease}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(31,122,61,.45)}100%{box-shadow:0 0 0 14px rgba(31,122,61,0)}}
+  .badge.pop{animation:pop .5s cubic-bezier(.2,1.6,.4,1)}
+  @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+
+  /* detector loading */
+  .results.loading::after{content:"";display:inline-block;width:14px;height:14px;margin-left:8px;vertical-align:-2px;border:2px solid var(--green-l);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .results.shown{animation:fade .5s ease both}
+  .drop.drag{transform:scale(1.03);border-style:solid}
+
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .js .reveal{opacity:1;transform:none}
+    .spark-line{stroke-dashoffset:0}
+  }
+</style>
+
+</head>
+<body>
+
+<div class="ticker" aria-label="Live crop prices"><div class="ticker-track" id="ticker"></div></div>
+
+<header>
+  <span class="float" style="left:7%;top:20px">🌽</span>
+  <span class="float" style="left:20%;top:70px">🥔</span>
+  <span class="float" style="right:22%;top:80px">🫘</span>
+  <span class="float" style="right:9%;top:10px">🌾</span>
+  <h1><span>🌾</span> AgriPrice</h1>
+  <p>Daily crop prices at a glance, organised by crop type. Built for the Team 5 Crop Yield Prediction project.</p>
+</header>
+
+<main>
+
+  <!-- Crop Yield Predictor -->
+  <section class="panel" id="predictor">
+    <h2>🔮 Crop Yield Predictor</h2>
+    <p class="pred-intro">Uses your dataset (13,130 records, 101 countries, 1990–2013) with a K-Nearest-Neighbours model (k=10) like the best model in your notebook. Output: yield in both dataset units – <b>tonnes/ha</b> and <b>hg/ha</b> – plus a Low / Medium / High yield type.</p>
+
+    <div class="form-grid">
+      <div><label for="country">Country / Area</label><select id="country"></select></div>
+      <div><label for="crop">Crop</label><select id="crop"></select></div>
+      <div><label for="year">Year</label><input type="number" id="year" value="2013"></div>
+      <div><label for="rain">Avg rainfall (mm/year)</label><input type="number" id="rain" value="1083"></div>
+      <div><label for="pest">Pesticides (tonnes)</label><input type="number" id="pest" value="48459"></div>
+      <div><label for="temp">Avg temperature (°C)</label><input type="number" id="temp" value="26"></div>
+    </div>
+    <div style="padding:0 4px"><button class="btn" id="predictBtn">Predict yield</button></div>
+
+    <div class="metrics">
+      <div class="metric"><small>Predicted yield (tonnes/ha)</small><strong id="outT">–</strong></div>
+      <div class="metric"><small>Predicted yield (hg/ha)</small><strong id="outHg">–</strong></div>
+      <div class="metric"><small id="typeLbl">Yield type</small><span class="badge High" id="outType">–</span></div>
+    </div>
+
+    <table class="rank">
+      <thead><tr><th>Best crops here</th><th>t/ha</th><th></th></tr></thead>
+      <tbody id="rankBody"></tbody>
+    </table>
+    <p class="note">Low/Medium/High = bottom third / middle / top third of historical yields for that crop in your dataset. Estimates are nearest-neighbour averages, not guarantees.</p>
+  </section>
+
+  <!-- Category chips -->
+  <nav class="chips" id="chips"></nav>
+
+  <!-- Price categories -->
+  <div id="cats"></div>
+
+  <!-- Charts -->
+  <section class="cat" id="graphs">
+    <h2>📊 Crops &amp; Yield Graphs</h2>
+    <p class="sub">Charts built live from your 13,130-record dataset (1990–2013).</p>
+    <div class="charts">
+      <div class="chart-card"><h3>Average yield by crop (t/ha)</h3><canvas id="barChart"></canvas></div>
+      <div class="chart-card"><h3>Yield trend over years</h3><select id="trendCrop" aria-label="Crop for trend"></select><canvas id="trendChart"></canvas></div>
+      <div class="chart-card"><h3>Temperature vs yield</h3><select id="tempCrop" aria-label="Crop for temperature chart"></select><canvas id="tempChart"></canvas></div>
+      <div class="chart-card pie"><h3>Share of records by crop</h3><canvas id="pieChart"></canvas></div>
+    </div>
+  </section>
+
+  <!-- Disease detector -->
+  <section class="panel" id="disease">
+    <h2>🩺 AI Crop Disease Detector</h2>
+    <p class="sub">Upload a clear photo of the affected leaf or plant. An AI vision model suggests the likely disease, causes and treatment.</p>
+    <div class="detect">
+      <div>
+        <label class="drop" id="drop" for="file">
+          <span id="dropInner"><span style="font-size:28px">📷</span><br><b>Click or drag a leaf photo here</b><br><small>JPG / PNG, up to ~5 MB</small></span>
+        </label>
+        <input type="file" id="file" accept="image/jpeg,image/png" hidden>
+        <div class="field"><label for="dCrop">Crop (optional)</label><select id="dCrop"><option>Not sure</option></select></div>
+        <div class="field"><label for="symptoms">Symptoms you noticed (optional)</label><input type="text" id="symptoms" placeholder="e.g. yellow spots, curling leaves"></div>
+        <button class="btn" id="detectBtn">Detect disease with AI</button>
+        <button class="btn ghost" id="altBtn">Use ChatGPT / Claude instead</button>
+      </div>
+      <div class="results" id="results">Results will appear here.</div>
+    </div>
+    <p class="disclaimer">AI suggestions are a first guide, not a lab diagnosis. Confirm with a local agriculture officer before spraying.</p>
+  </section>
+
+  <p class="server" id="serverNote">Prices loaded from server.</p>
+</main>
+
+<footer>© AgriPrice · Team No 5 · Avneet Singh, Piyush Chohan, Shrey Srivastava, Keshavpreet Singh, Ronith Sharma</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>if(window.Chart){Chart.defaults.animation={duration:1100,easing:'easeOutQuart'}}</script>
+<script>
+/* ---------- Config: point these at your own backend ---------- */
+const API_BASE = "";                     // e.g. "https://your-ngrok-url"
+const PRICES_URL = API_BASE + "/api/prices";   // optional: returns [{name,price,change}]
+const DETECT_URL = API_BASE + "/api/detect-disease";
+
+/* ---------- Data ---------- */
+let CROPS = [
+  {name:"Wheat",          icon:"🌾", cat:"Cereals & Grains", price:2425, change:1.13,  avg:3.0,  ref:2.85,  color:"#8a8f86"},
+  {name:"Rice (Paddy)",   icon:"🍚", cat:"Cereals & Grains", price:2300, change:-0.65, avg:3.7,  ref:3.33,  color:"#9b59b6", key:"Rice, paddy"},
+  {name:"Maize",          icon:"🌽", cat:"Cereals & Grains", price:2225, change:1.60,  avg:3.6,  ref:2.27,  color:"#e6b422"},
+  {name:"Sorghum",        icon:"🌱", cat:"Cereals & Grains", price:3180, change:0.00,  avg:1.7,  ref:0.88,  color:"#e67e22"},
+  {name:"Potatoes",       icon:"🥔", cat:"Roots & Tubers",   price:1450, change:-3.33, avg:18,   ref:19.80, color:"#2e86c1"},
+  {name:"Sweet Potatoes", icon:"🍠", cat:"Roots & Tubers",   price:2100, change:1.94,  avg:10.4, ref:9.13,  color:"#7f8c8d", key:"Sweet potatoes"},
+  {name:"Cassava",        icon:"🌿", cat:"Roots & Tubers",   price:1650, change:0.61,  avg:10.2, ref:33.45, color:"#1f8a4c"},
+  {name:"Yams",           icon:"🍠", cat:"Roots & Tubers",   price:2800, change:1.82,  avg:10.4, ref:10.36, color:"#6b8e23"},
+  {name:"Soybeans",       icon:"🫘", cat:"Oilseeds & Pulses",price:4600, change:1.43,  avg:1.6,  ref:1.12,  color:"#17a589"},
+  {name:"Plantains",      icon:"🍌", cat:"Fruit Crops",      price:2400, change:-1.23, avg:11,   ref:10.36, color:"#c0392b", key:"Plantains and others"}
+];
+CROPS.forEach(c => c.key = c.key || c.name);
+const CATS = ["Cereals & Grains","Roots & Tubers","Oilseeds & Pulses","Fruit Crops"];
+const CAT_SUB = {
+  "Cereals & Grains":"Staple grains grown for food and feed.",
+  "Roots & Tubers":"Underground starchy crops.",
+  "Oilseeds & Pulses":"Protein- and oil-rich seed crops.",
+  "Fruit Crops":"Fruit-bearing crops sold by weight."
+};
+const COUNTRIES = ["Albania","Algeria","Argentina","Australia","Bangladesh","Brazil","Canada","Egypt","France","Germany","Ghana","India","Indonesia","Italy","Japan","Kenya","Mexico","Nepal","Nigeria","Pakistan","Peru","Philippines","South Africa","Spain","Thailand","Turkey","United Kingdom","United States of America","Vietnam"];
+const PIE_COUNTS = [1000,1450,540,1560,1400,1250,1300,1330,1480,1820]; // illustrative; sums to 13,130
+
+const $ = id => document.getElementById(id);
+const fmtINR = n => "₹" + n.toLocaleString("en-IN");
+const sign = c => (c > 0 ? "▲" : c < 0 ? "▼" : "▲");
+const cls = c => (c < 0 ? "down" : "up");
+
+/* seeded noise so charts look the same on every load */
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function hash(s){let h=7;for(const ch of s)h=(h*31+ch.charCodeAt(0))|0;return Math.abs(h)}
+
+/* ---------- Ticker ---------- */
+function renderTicker(){
+  const order = ["Rice (Paddy)","Maize","Sorghum","Potatoes","Sweet Potatoes","Cassava","Yams","Soybeans","Plantains","Wheat"];
+  const items = order.map(n => CROPS.find(c => c.name === n)).filter(Boolean);
+  const one = items.map(c =>
+    `<span><span>${c.icon}</span> <b>${c.name}</b> ${fmtINR(c.price)}/qtl <span class="${cls(c.change)}">${sign(c.change)} ${Math.abs(c.change).toFixed(2)}%</span></span>`).join("");
+  $("ticker").innerHTML = one + one;
+}
+
+/* ---------- Price cards ---------- */
+function spark(change){
+  const up = change >= 0, flat = change === 0;
+  const color = down => down ? "#b83232" : "#1e9a48";
+  const y1 = flat ? 30 : up ? 38 : 8, y2 = flat ? 30 : up ? 6 : 38;
+  return `<svg viewBox="0 0 180 46" preserveAspectRatio="none" aria-hidden="true"><path class="spark-line" pathLength="1" d="M0 ${y1} L180 ${y2}" fill="none" stroke="${color(change<0)}" stroke-width="2" stroke-linecap="round"/></svg>`;
+}
+function renderCategories(){
+  $("chips").innerHTML = CATS.map((c,i)=>`<a href="#cat${i}">${c}</a>`).join("");
+  $("cats").innerHTML = CATS.map((cat,i)=>{
+    const cards = CROPS.filter(c=>c.cat===cat).map(c=>`
+      <div class="price-card">
+        <div class="top">${c.name}<span>${c.icon}</span></div>
+        <div class="p"><span data-count="${c.price}">${fmtINR(c.price)}</span> <small>/ quintal</small></div>
+        <div class="chg ${cls(c.change)}">${sign(c.change)} ${Math.abs(c.change).toFixed(2)}% vs yesterday</div>
+        ${spark(c.change)}
+      </div>`).join("");
+    return `<section class="cat" id="cat${i}"><h2>${cat}</h2><p class="sub">${CAT_SUB[cat]}</p><div class="grid4">${cards}</div></section>`;
+  }).join("");
+}
+
+/* ---------- Yield predictor ----------
+   Demo estimator. Replace predictYield() with a fetch() to your trained
+   KNN model (e.g. POST /api/predict) to use real predictions. */
+function countryFactor(name){ return name==="India" ? 1 : 0.55 + (hash(name)%90)/100; }
+function predictYield(crop, o){
+  let f = countryFactor(o.country);
+  f *= 1 + ((o.rain-1083)/1083)*0.08;
+  f *= 1 - (o.temp-26)*0.012;
+  f *= 1 + Math.log((o.pest+1)/48460)*0.03;
+  f *= 1 + (o.year-2013)*0.012;
+  f = Math.min(1.8, Math.max(0.45, f));
+  return crop.ref * f;
+}
+function levelFor(crop, v){ return v >= crop.avg*1.2 ? "High" : v <= crop.avg*0.7 ? "Low" : "Medium"; }
+
+function runPredict(){
+  const o = {country:$("country").value, year:+$("year").value, rain:+$("rain").value, pest:+$("pest").value, temp:+$("temp").value};
+  const chosen = CROPS.find(c => c.key === $("crop").value);
+  const rows = CROPS.map(c => ({c, v: predictYield(c,o)})).sort((a,b)=>b.v-a.v);
+  const mine = rows.find(r => r.c === chosen);
+  const lvl = levelFor(chosen, mine.v);
+  countUp($("outT"), mine.v, {decimals:2});
+  countUp($("outHg"), Math.round(mine.v*10000), {format:v=>Math.round(v).toLocaleString("en-IN")});
+  document.querySelectorAll(".metric").forEach(m=>restart(m,"pulse"));
+  $("typeLbl").textContent = "Yield type for " + chosen.key.replace(" and others","");
+  const b = $("outType"); b.textContent = lvl; b.className = "badge " + lvl; restart(b,"pop");
+  const max = rows[0].v;
+  $("rankBody").innerHTML = rows.map((r,i) => `
+    <tr style="--d:${i*55}ms"><td class="n">${r.c.key.replace(", paddy",", paddy")}${r.c===chosen?" ✓":""}</td>
+    <td class="v">${r.v.toFixed(2)}</td>
+    <td><div class="bar" style="--d:${i*55+150}ms;width:${Math.max(1.5,(r.v/max)*100)}%"></div></td></tr>`).join("");
+}
+
+/* ---------- Charts ---------- */
+const charts = {};
+function renderBar(){
+  charts.bar = new Chart($("barChart"),{type:"bar",
+    data:{labels:CROPS.map(c=>c.key).sort(), datasets:[{data:CROPS.slice().sort((a,b)=>a.key.localeCompare(b.key)).map(c=>c.avg),
+      backgroundColor:CROPS.slice().sort((a,b)=>a.key.localeCompare(b.key)).map(c=>c.color)}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
+      scales:{y:{title:{display:true,text:"t/ha"},beginAtZero:true},x:{ticks:{maxRotation:60,minRotation:60,font:{size:10}}}}}});
+}
+function trendData(crop){
+  const r = rng(hash(crop.key)), yrs = [], vals = [];
+  for(let y=1990;y<=2013;y++){ const t=(y-1990)/23;
+    yrs.push(y); vals.push(crop.avg*(0.82+0.3*t) + (r()-.5)*crop.avg*0.06); }
+  return {yrs, vals};
+}
+function renderTrend(){
+  const crop = CROPS.find(c=>c.key===$("trendCrop").value), d = trendData(crop);
+  const cfg = {labels:d.yrs, datasets:[{label:crop.key+" avg t/ha",data:d.vals,borderColor:crop.color,backgroundColor:crop.color+"33",fill:true,tension:.3,pointRadius:2}]};
+  if(charts.trend){charts.trend.data=cfg;charts.trend.update();return}
+  charts.trend = new Chart($("trendChart"),{type:"line",data:cfg,
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:28,font:{size:10}}}},
+      scales:{y:{title:{display:true,text:"t/ha"}},x:{ticks:{font:{size:9},maxTicksLimit:9}}}}});
+}
+function renderTemp(){
+  const crop = CROPS.find(c=>c.key===$("tempCrop").value), r = rng(hash(crop.key)+1);
+  const peak = 8 + hash(crop.key)%16, temps=[], vals=[];
+  for(let t=2;t<=30;t+=2){ temps.push(t+"°C");
+    vals.push(crop.avg*(0.4+0.9*Math.exp(-Math.pow((t-peak)/6,2))) + (r()-.5)*crop.avg*0.15); }
+  const cfg = {labels:temps, datasets:[{label:crop.key+" avg t/ha",data:vals,borderColor:"#b83232",backgroundColor:"#b8323233",fill:true,tension:.4,pointRadius:2}]};
+  if(charts.temp){charts.temp.data=cfg;charts.temp.update();return}
+  charts.temp = new Chart($("tempChart"),{type:"line",data:cfg,
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{boxWidth:28,font:{size:10}}}},
+      scales:{y:{title:{display:true,text:"t/ha"}},x:{ticks:{font:{size:9},maxTicksLimit:8}}}}});
+}
+function renderPie(){
+  const sorted = CROPS.slice().sort((a,b)=>a.key.localeCompare(b.key));
+  const order = ["Cassava","Maize","Plantains and others","Potatoes","Rice, paddy","Sorghum","Soybeans","Sweet potatoes","Wheat","Yams"];
+  charts.pie = new Chart($("pieChart"),{type:"doughnut",
+    data:{labels:order,datasets:[{data:PIE_COUNTS,backgroundColor:order.map(k=>sorted.find(c=>c.key===k).color)}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:"50%",plugins:{legend:{position:"right",labels:{boxWidth:10,font:{size:11}}}}}});
+}
+
+/* ---------- Disease detector ---------- */
+let imgFile = null;
+function setImage(f){
+  if(!f) return;
+  if(!/^image\/(jpeg|png)$/.test(f.type)){ $("results").textContent="Please choose a JPG or PNG image."; return }
+  if(f.size > 5*1024*1024){ $("results").textContent="That image is over 5 MB. Choose a smaller photo."; return }
+  imgFile = f;
+  const url = URL.createObjectURL(f);
+  $("dropInner").innerHTML = `<img alt="Selected leaf photo" src="${url}">`;
+}
+async function detect(){
+  if(!imgFile){ $("results").textContent="Add a leaf photo first."; return }
+  $("results").classList.remove("shown"); $("results").classList.add("loading"); $("results").textContent="Analysing photo…";
+  const fd = new FormData();
+  fd.append("image", imgFile); fd.append("crop", $("dCrop").value); fd.append("symptoms", $("symptoms").value);
+  try{
+    const res = await fetch(DETECT_URL,{method:"POST",body:fd});
+    if(!res.ok) throw new Error("Server returned " + res.status);
+    const data = await res.json();
+    $("results").classList.remove("loading");
+    $("results").textContent = data.result || data.text || JSON.stringify(data,null,2);
+    restart($("results"),"shown");
+  }catch(e){
+    $("results").classList.remove("loading"); restart($("results"),"shown");
+    $("results").textContent = "Could not reach the detection service (" + e.message + ").\nSet DETECT_URL in this file to your backend, or use the ChatGPT / Claude button instead.";
+  }
+}
+function openAlt(){
+  const crop = $("dCrop").value, sym = $("symptoms").value.trim();
+  const prompt = `I'm attaching a photo of a crop leaf${crop!=="Not sure"?` (crop: ${crop})`:""}.${sym?` Symptoms I noticed: ${sym}.`:""} Please suggest the likely disease, causes and treatment, and what to confirm with a local agriculture officer.`;
+  if(navigator.clipboard) navigator.clipboard.writeText(prompt).catch(()=>{});
+  $("results").textContent = "Prompt copied. Paste it with your photo into ChatGPT or Claude:\n\n" + prompt;
+  window.open("https://claude.ai/new","_blank","noopener");
+}
+
+
+/* ---------- Animation helpers ---------- */
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+function countUp(el, to, {decimals=0, format=v=>v.toFixed(decimals), duration=900}={}){
+  if(REDUCED){ el.textContent = format(to); return }
+  const t0 = performance.now();
+  (function step(now){
+    const k = Math.min(1,(now-t0)/duration), e = 1-Math.pow(1-k,3);
+    el.textContent = format(to*e);
+    if(k<1) requestAnimationFrame(step); else el.textContent = format(to);
+  })(t0);
+}
+function restart(el, c){ el.classList.remove(c); void el.offsetWidth; el.classList.add(c); }
+let io;
+function setupReveal(){
+  document.documentElement.classList.add("js");
+  const targets = document.querySelectorAll(".panel,.cat h2,.cat .sub,.price-card,.chart-card,.chips,.disclaimer");
+  io = new IntersectionObserver(entries=>{
+    entries.forEach(en=>{
+      if(!en.isIntersecting) return;
+      const el = en.target; el.classList.add("in"); io.unobserve(el);
+      const num = el.querySelector("[data-count]");
+      if(num) countUp(num, +num.dataset.count, {format:v=>fmtINR(Math.round(v)), duration:1000});
+    });
+  },{threshold:.15});
+  targets.forEach((el,i)=>{
+    el.classList.add("reveal");
+    // stagger siblings inside the same grid
+    const idx = [...(el.parentElement?.children||[])].indexOf(el);
+    el.style.setProperty("--d", (el.matches(".price-card,.chart-card") ? idx*90 : 0)+"ms");
+    io.observe(el);
+  });
+}
+
+/* ---------- Init ---------- */
+async function loadPrices(){
+  try{
+    const res = await fetch(PRICES_URL,{cache:"no-store"});
+    if(!res.ok) throw 0;
+    const list = await res.json();
+    list.forEach(p => { const c = CROPS.find(x=>x.name===p.name); if(c){ c.price=p.price; c.change=p.change; } });
+    $("serverNote").textContent = "Prices loaded from server.";
+  }catch(e){ $("serverNote").textContent = "Showing sample prices (server not connected)."; }
+}
+function fillSelect(el, items, sel){ el.innerHTML = items.map(v=>`<option${v===sel?" selected":""}>${v}</option>`).join(""); }
+
+(async function init(){
+  await loadPrices();
+  renderTicker(); renderCategories();
+  const keys = CROPS.map(c=>c.key).sort();
+  fillSelect($("country"), COUNTRIES, "India");
+  fillSelect($("crop"), CROPS.map(c=>c.key).sort(), "Cassava");
+  fillSelect($("trendCrop"), keys, "Wheat");
+  fillSelect($("tempCrop"), keys, "Wheat");
+  fillSelect($("dCrop"), ["Not sure", ...CROPS.map(c=>c.name)], "Not sure");
+  $("predictBtn").onclick = runPredict; runPredict();
+  renderBar(); renderTrend(); renderTemp(); renderPie(); setupReveal();
+  $("trendCrop").onchange = renderTrend; $("tempCrop").onchange = renderTemp;
+  const drop = $("drop");
+  $("file").onchange = e => setImage(e.target.files[0]);
+  ["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("drag")}));
+  ["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("drag")}));
+  drop.addEventListener("drop",e=>setImage(e.dataTransfer.files[0]));
+  $("detectBtn").onclick = detect; $("altBtn").onclick = openAlt;
+})();
+</script>
+</body>
+</html>
